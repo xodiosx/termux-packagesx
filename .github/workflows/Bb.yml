@@ -1,87 +1,68 @@
-name: Build XoDos Termux Bootstrap
+name: Generate XoDos bootstrap archives
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
+  schedule:
+    - cron: "0 0 * * 0"
 
-permissions:
-  contents: write
+permissions: {} # default none
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  TERMUX_APP_PACKAGE: com.xodos
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch:
+          - aarch64
+          # add other arches if needed: arm, i686, x86_64
     steps:
-    # ---------------------------------------
-    # Checkout
-    # ---------------------------------------
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Build bootstrap
+        run: ./scripts/generate-bootstraps.sh --architectures ${{ matrix.arch }}
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-archives-${{ matrix.arch }}-${{ github.sha }}
+          path: "*.zip"
 
-    # ---------------------------------------
-    # Host dependencies
-    # ---------------------------------------
-    - name: Install host dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y \
-          autoconf automake bison build-essential \
-          cmake curl flex gawk git libtool \
-          pkg-config python3 rsync unzip \
-          openjdk-17-jdk \
-          libarchive-tools wget unzip
-
-    # ---------------------------------------
-    # Environment setup
-    # ---------------------------------------
-    - name: Setup Termux environment variables
-      run: |
-        echo 'TERMUX_APP_PACKAGE=com.xodos' >> $GITHUB_ENV
-        echo 'TERMUX_ARCH=aarch64' >> $GITHUB_ENV
-        echo 'TERMUX_PACKAGES_OFFLINE=false' >> $GITHUB_ENV
-
-    # ---------------------------------------
-    # Setup Android NDK
-    # ---------------------------------------
-    - name: Setup Android NDK
-      run: |
-       echo 'TERMUX_USE_NDK_MOUNT=true' >> $GITHUB_ENV
-        wget https://dl.google.com/android/repository/android-ndk-r25c-linux.zip -O ndk.zip
-        unzip -q ndk.zip -d $HOME/
-        echo 'TERMUX_NDK=$HOME/android-ndk-r25c' >> $GITHUB_ENV
-
-    # ---------------------------------------
-    # Build bootstrap using official scripts
-    # ---------------------------------------
-    - name: Build bootstrap
-      run: |
-        echo 'TERMUX_USE_NDK_MOUNT=true' >> $GITHUB_ENV
-        ./scripts/run-docker.sh ./scripts/build-bootstraps.sh
-
-    # ---------------------------------------
-    # Rename output for clarity
-    # ---------------------------------------
-    - name: Prepare release artifact
-      run: |
-        mkdir -p release
-        cp output/bootstrap-*.zip release/xodos-bootstrap-aarch64.zip
-
-    # ---------------------------------------
-    # Create GitHub Release
-    # ---------------------------------------
-    - name: Create release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: xodos-bootstrap-${{ github.run_number }}
-        name: XoDos Bootstrap ${{ github.run_number }}
-        body: |
-          XoDos custom Termux bootstrap
-
-          - Package name: com.xodos
-          - Architecture: aarch64
-          - Built from official termux-packages
-          - Clean PREFIX (/data/data/com.xodos/files/usr)
-
-        files: |
-          release/xodos-bootstrap-aarch64.zip
+  publish:
+    permissions:
+      contents: write
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: ./
+      - name: Create release tag
+        id: get_tag
+        run: |
+          new_tag="xodos-bootstrap-$(date '+%Y.%m.%d')"
+          git tag "$new_tag"
+          git push --tags
+          echo "tag_name=$new_tag" >> $GITHUB_OUTPUT
+      - name: Publish bootstrap zips to GitHub release
+        uses: termux/upload-release-action@v4.2.0
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: "*.zip"
+          file_glob: true
+          release_name: "XoDos bootstrap archives"
+          tag: ${{ steps.get_tag.outputs.tag_name }}
+          checksums: sha256,sha512,md5
