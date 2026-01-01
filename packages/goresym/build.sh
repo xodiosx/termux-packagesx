@@ -11,14 +11,14 @@ TERMUX_PKG_BUILD_IN_SRC=true
 TERMUX_PKG_BUILD_DEPENDS=golang
 
 termux_step_pre_configure() {
-    termux_setup_golang
+	termux_setup_golang
 }
 
 termux_step_make() {
-    go build -o goresym
+	go build -o goresym
 }
 
 termux_step_make_install() {
-    install -Dm755 goresym \
-        $TERMUX_PREFIX/bin/goresym
+	install -Dm755 goresym \
+	    $TERMUX_PREFIX/bin/goresym
 }
