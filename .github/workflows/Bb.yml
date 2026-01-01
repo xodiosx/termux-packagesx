@@ -27,6 +27,22 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+       
+      - name: Patch Termux app package (prefix source)
+        run: |
+         sed -i \
+          's/^TERMUX_APP_PACKAGE="com.termux"/TERMUX_APP_PACKAGE="com.xodos"/' \
+           scripts/properties.sh
+
+      - name: Verify Termux prefix
+        run: |
+          source scripts/properties.sh
+           echo "TERMUX_APP_PACKAGE=$TERMUX_APP_PACKAGE"
+           echo "TERMUX_PREFIX=$TERMUX_PREFIX"
+           echo "TERMUX_HOME=$TERMUX_HOME"
+
+
+        
       - name: Build bootstrap
         run: ./scripts/generate-bootstraps.sh --architectures ${{ matrix.arch }}
       - name: Upload artifacts
