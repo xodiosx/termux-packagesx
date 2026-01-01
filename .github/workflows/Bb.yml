@@ -46,9 +46,7 @@ jobs:
     # ---------------------------------------
     - name: Build bootstrap
       run: |
-        ./scripts/run-docker.sh \
-          ./scripts/build-bootstrap.sh
-
+        ./scripts/run-docker.sh ./scripts/bootstrap/build.sh
     # ---------------------------------------
     # Rename output for clarity
     # ---------------------------------------
