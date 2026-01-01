@@ -19,6 +19,5 @@ termux_step_make() {
 }
 
 termux_step_make_install() {
-	install -Dm755 goresym \
-	    $TERMUX_PREFIX/bin/goresym
+	install -Dm755 goresym $TERMUX_PREFIX/bin/goresym
 }
