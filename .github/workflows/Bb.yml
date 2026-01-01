@@ -69,7 +69,7 @@ jobs:
       - name: Create release tag
         id: get_tag
         run: |
-          new_tag="xodos-bootstrap-$(date '+%Y.%m.%d')"
+          new_tag="xodos-bootstrap2-$(date '+%Y.%m.%d')"
           git tag "$new_tag"
           git push --tags
           echo "tag_name=$new_tag" >> $GITHUB_OUTPUT
