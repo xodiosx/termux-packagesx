@@ -1,0 +1,77 @@
+name: Build XoDos Termux Bootstrap
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    # ---------------------------------------
+    # Checkout
+    # ---------------------------------------
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # ---------------------------------------
+    # Host dependencies
+    # ---------------------------------------
+    - name: Install host dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y \
+          autoconf automake bison build-essential \
+          cmake curl flex gawk git libtool \
+          pkg-config python3 rsync unzip \
+          openjdk-17-jdk \
+          libarchive-tools
+
+    # ---------------------------------------
+    # Environment setup
+    # ---------------------------------------
+    - name: Setup Termux environment variables
+      run: |
+        echo "TERMUX_APP_PACKAGE=com.xodos" >> $GITHUB_ENV
+        echo "TERMUX_ARCH=aarch64" >> $GITHUB_ENV
+        echo "TERMUX_PACKAGES_OFFLINE=false" >> $GITHUB_ENV
+
+    # ---------------------------------------
+    # Build bootstrap using official scripts
+    # ---------------------------------------
+    - name: Build bootstrap
+      run: |
+        ./scripts/run-docker.sh \
+          ./scripts/build-bootstrap.sh
+
+    # ---------------------------------------
+    # Rename output for clarity
+    # ---------------------------------------
+    - name: Prepare release artifact
+      run: |
+        mkdir -p release
+        cp output/bootstrap-*.zip release/xodos-bootstrap-aarch64.zip
+
+    # ---------------------------------------
+    # Create GitHub Release
+    # ---------------------------------------
+    - name: Create release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: xodos-bootstrap-${{ github.run_number }}
+        name: XoDos Bootstrap ${{ github.run_number }}
+        body: |
+          XoDos custom Termux bootstrap
+
+          - Package name: com.xodos
+          - Architecture: aarch64
+          - Built from official termux-packages
+          - Clean PREFIX (/data/data/com.xodos/files/usr)
+
+        files: |
+          release/xodos-bootstrap-aarch64.zip￼Enter
