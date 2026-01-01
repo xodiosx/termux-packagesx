@@ -15,10 +15,10 @@ termux_step_pre_configure() {
 }
 
 termux_step_make() {
-	go build -o goresym
+    go build -o goresym
 }
 
 termux_step_make_install() {
-	install -Dm755 goresym \
-		$TERMUX_PREFIX/bin/goresym
+    install -Dm755 goresym \
+        $TERMUX_PREFIX/bin/goresym
 }
